@@ -504,7 +504,7 @@ $("tf").addEventListener("click", () => setTimeout(favDraw, 0));
 const GIST = (() => { try { const r = new URLSearchParams(location.search).get("s");
   return r ? (JSON.parse(decodeURIComponent(escape(atob(r.replace(/-/g, "+").replace(/_/g, "/"))))).g || "") : ""; } catch (e) { return ""; } })();
 async function loadLive(first) {
-  if (!GIST || document.hidden) return;
+  if (!GIST || (!first && document.hidden)) return;   // первая загрузка — всегда, обновления — когда экран виден
   try {
     const r = await fetch(`https://api.github.com/gists/${GIST}`, { cache: "no-store" });
     if (!r.ok) throw new Error(r.status);
