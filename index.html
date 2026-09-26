@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>R Консоль</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Тёмный «терминальный» облик — как у графика и консоли в ядре */
+  :root {
+    color-scheme: dark;
+    --bg: #131722; --panel: #1b1f2b; --panel-2: #222735; --line: #2a2e39;
+    --text: #d1d4dc; --muted: #8a8f9c; --up: #26a69a; --down: #ef5350; --accent: #3d7bff; --warn: #e0a534;
+    --sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px var(--sans); }
+  .top { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 8px; border-bottom: 1px solid var(--line); }
+  .bar { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; max-width: 560px; margin: 0 auto 8px; }
+  h1 { margin: 0; font-size: 17px; font-weight: 600; }
+  h1 .sym { font-family: var(--mono); color: var(--accent); }
+  .stamp { font: 500 12px var(--mono); color: var(--muted); white-space: nowrap; }
+  .stamp.old { color: var(--warn); }
+  nav { display: flex; gap: 6px; overflow-x: auto; max-width: 560px; margin: 0 auto; scrollbar-width: none; }
+  nav::-webkit-scrollbar { display: none; }
+  nav button { flex-shrink: 0; font: 500 13px var(--sans); color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 11px; cursor: pointer; }
+  nav button[aria-selected="true"] { color: #fff; background: var(--accent); border-color: var(--accent); }
+
+  main { max-width: 560px; margin: 0 auto; padding-inline: 16px; padding-block: 12px calc(90px + env(safe-area-inset-bottom, 0px)); }
+  .view { display: flex; flex-direction: column; gap: 12px; }
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .cell { background: var(--panel); padding: 9px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .cell .k { font-size: 10px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+  .cell .v { font: 600 15px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .u { color: var(--up); } .d { color: var(--down); } .w { color: var(--warn); } .m { color: var(--muted); }
+
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  section h2 { margin: 0; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; }
+  .hh { align-items: center; }
+  .mini { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg); letter-spacing: 0; }
+  .mini button { width: 30px; height: 26px; font: 600 15px var(--mono); color: var(--text); background: var(--panel-2); border: 0; cursor: pointer; }
+  .mini output { min-width: 30px; text-align: center; font: 600 12px var(--mono); color: var(--text); }
+  .term { font: 13px/1.55 var(--mono); white-space: pre; overflow-x: auto; margin: 0; font-variant-numeric: tabular-nums; }
+  .term .sep { color: var(--muted); }
+  .list { display: flex; flex-direction: column; }
+  .li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .li:first-child { border-top: 0; }
+  .li .t { font: 12px var(--mono); color: var(--muted); }
+  .li .p { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .li .r { font: 500 12px var(--mono); white-space: nowrap; }
+  .empty { color: var(--muted); font-size: 13px; }
+  .pill { font: 600 12px var(--mono); padding: 3px 8px; border-radius: 20px; background: var(--panel-2); border: 1px solid var(--line); }
+  .pill.u { border-color: var(--up); } .pill.d { border-color: var(--down); } .pill.w { border-color: var(--warn); }
+
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .row .lbl { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .row .lbl small { color: var(--muted); font-size: 12px; }
+  .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; flex-shrink: 0; }
+  .seg button { font: 500 13px var(--mono); color: var(--muted); background: transparent; border: 0; padding: 8px 12px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { color: #fff; background: var(--accent); }
+  .switch { position: relative; width: 50px; height: 30px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 100%; height: 100%; margin: 0; position: absolute; inset: 0; cursor: pointer; z-index: 1; }
+  .switch span { position: absolute; inset: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 30px; transition: background .15s; }
+  .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+  .switch input:checked + span { background: rgba(38,166,154,.25); border-color: var(--up); }
+  .switch input:checked + span::after { transform: translateX(20px); background: var(--up); }
+  .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--bg); flex-shrink: 0; }
+  .stepper button { width: 40px; height: 36px; font: 600 18px var(--mono); color: var(--text); background: var(--panel-2); border: 0; cursor: pointer; }
+  .stepper output { min-width: 78px; text-align: center; font: 600 15px var(--mono); font-variant-numeric: tabular-nums; }
+  .warn { color: var(--warn); font-size: 12px; line-height: 1.45; margin: 0; }
+  .hint { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 0; }
+  a.cta { display: block; text-align: center; padding: 13px; font: 600 15px var(--sans); color: #fff; background: var(--accent); border-radius: 9px; text-decoration: none; }
+  .big { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(transparent, var(--bg) 30%); }
+  .big button { width: 100%; max-width: 560px; display: block; margin: 0 auto; padding: 14px; font: 600 15px var(--sans); color: #fff; background: var(--accent); border: 0; border-radius: 9px; cursor: pointer; }
+  .toast { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 9; max-width: 90vw; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="bar"><h1><span class="sym">R·6+</span> Консоль</h1><span class="stamp" id="stamp">нет данных</span></div>
+  <nav role="tablist" aria-label="Экраны">
+    <button role="tab" data-v="live" aria-selected="true">🎯 Live</button>
+    <button role="tab" data-v="today" aria-selected="false">📅 Сегодня</button>
+    <button role="tab" data-v="h2" aria-selected="false">🧪 H2</button>
+    <button role="tab" data-v="stats" aria-selected="false">📊 Итоги</button>
+    <button role="tab" data-v="ctl" aria-selected="false">⚙️ Пульт</button>
+    <button role="tab" data-v="chart" aria-selected="false">📈 График</button>
+  </nav>
+</div>
+
+<main>
+  <!-- LIVE -->
+  <div class="view" id="v-live">
+    <section><h2><span>Идут сейчас</span><span id="liveN"></span></h2><pre class="term" id="live"></pre></section>
+    <section><h2 class="hh"><span>История <span id="histN" class="m"></span></span>
+        <span class="mini"><button id="hdec" aria-label="Показать меньше сессий">−</button><output id="histOut">10</output><button id="hinc" aria-label="Показать больше сессий">+</button></span></h2>
+      <pre class="term" id="hist"></pre>
+      <p class="hint">🔴 больше · 🟢 меньше · ⚡N — серия N подряд · ✅❌ позиция 6+ (★ — на порога H2)</p></section>
+  </div>
+
+  <!-- СЕГОДНЯ -->
+  <div class="view" id="v-today" hidden>
+    <div class="board">
+      <div class="cell"><span class="k">Сессий завершено</span><span class="v" id="tF">—</span></div>
+      <div class="cell"><span class="k">Позиций 6+</span><span class="v" id="tN">—</span></div>
+      <div class="cell"><span class="k">Точность</span><span class="v" id="tWR">—</span></div>
+      <div class="cell"><span class="k">В часы ядра</span><span class="v" id="tH">—</span></div>
+      <div class="cell"><span class="k">По правилу H2</span><span class="v" id="tH2">—</span></div>
+      <div class="cell"><span class="k">Идёт/впереди</span><span class="v" id="tA">—</span></div>
+    </div>
+    <section><h2><span>Позиции сегодня (все 6+)</span><span>время ≈ позиции</span></h2><div class="list" id="tList"></div></section>
+  </div>
+
+  <!-- H2 -->
+  <div class="view" id="v-h2" hidden>
+    <section>
+      <h2><span>Проверка H2 на новых сессиях</span><span class="pill" id="h2Verdict">—</span></h2>
+      <pre class="term" id="h2Term"></pre>
+      <p class="hint">Правило: 6+ одинаковых тиков подряд → позиция на разворот, только при порога С 29.5–37.5. Считаются все такие позиции круглосуточно, независимо от настроек пульта. Для уверенного вывода нужно ~800 позиций (~4 месяца). Ожидание по прошлому: ~53.6–54.3% при безубытке ~50.9%.</p>
+    </section>
+  </div>
+
+  <!-- ИТОГИ -->
+  <div class="view" id="v-stats" hidden>
+    <div class="board">
+      <div class="cell"><span class="k">Баланс</span><span class="v" id="sBank">—</span></div>
+      <div class="cell"><span class="k">С начала</span><span class="v" id="sCh">—</span></div>
+      <div class="cell"><span class="k">Старт</span><span class="v" id="sStart">—</span></div>
+      <div class="cell"><span class="k">Позиций</span><span class="v" id="sN">—</span></div>
+      <div class="cell"><span class="k">Верно</span><span class="v" id="sW">—</span></div>
+      <div class="cell"><span class="k">Автопилот</span><span class="v" id="sPlay">—</span></div>
+    </div>
+    <section><h2><span>Последние события ядра</span><span id="sSet"></span></h2><div class="list" id="sList"></div></section>
+  </div>
+
+  <!-- ПУЛЬТ -->
+  <div class="view" id="v-ctl" hidden>
+    <section><h2>Автопилот (виртуальный)</h2>
+      <div class="row"><div class="lbl"><span id="playText">—</span><small>Ядро ведёт баланс «на бумаге» по событиям</small></div>
+        <label class="switch"><input type="checkbox" id="play" aria-label="Автопилот"><span></span></label></div></section>
+    <section><h2>Позиция</h2>
+      <div class="row"><div class="lbl"><span>Тип</span></div>
+        <div class="seg" id="mode"><button data-v="pct">% баланса</button><button data-v="rub">₽ фикс</button></div></div>
+      <div class="row"><div class="lbl"><span>Размер</span><small id="stakeHint"></small></div>
+        <div class="stepper"><button id="dec" aria-label="Меньше">−</button><output id="stakeOut">—</output><button id="inc" aria-label="Больше">+</button></div></div>
+      <p class="warn" id="stakeWarn" hidden>Больше 3% от баланса — на истории просадки доходили до 80% и выше.</p></section>
+    <section><h2>Усиление</h2>
+      <div class="row"><div class="lbl"><span>Режим</span></div>
+        <div class="seg" id="dogon"><button data-v="off">выкл</button><button data-v="x2">×2</button><button data-v="cover">перекр.</button></div></div>
+      <div class="row" id="stepsRow"><div class="lbl"><span>Шагов</span><small>после стольких минусов подряд минус фиксируется</small></div>
+        <div class="seg" id="steps"><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></div></div>
+      <p class="warn" id="dogonWarn" hidden>Усиление увеличивает редкие крупные минусы. При 4% и усилении баланс на истории сливался.</p></section>
+    <section><h2>Фильтры событий</h2>
+      <div class="row"><div class="lbl"><span>Порог 29.5–37.5</span><small>Правило H2. Выключишь — события на всех порогах</small></div>
+        <label class="switch"><input type="checkbox" id="lineH2" aria-label="Порог H2"><span></span></label></div>
+      <div class="row"><div class="lbl"><span>Только после ▲▲▲</span><small>Позиции только на «меньше» после серии «больше»</small></div>
+        <label class="switch"><input type="checkbox" id="onlyB" aria-label="Только после ▲▲▲"><span></span></label></div></section>
+    <section><h2>Баланс</h2>
+      <div class="row"><div class="lbl"><span>Начать счёт заново</span><small>Баланс и итоги автопилота обнулятся. Проверка H2 не трогается.</small></div>
+        <label class="switch"><input type="checkbox" id="reset" aria-label="Начать заново"><span></span></label></div>
+      <div class="row" id="resetRow" hidden><div class="lbl"><span>Стартовый баланс</span></div>
+        <div class="stepper"><button id="bdec" aria-label="Меньше">−</button><output id="bankOut">—</output><button id="binc" aria-label="Больше">+</button></div></div></section>
+    <p class="hint">Настройки применяются к виртуальной автопилоте ядра. В источнике ядро ничего не входит.</p>
+  </div>
+
+  <!-- ГРАФИК -->
+  <div class="view" id="v-chart" hidden>
+    <section><h2>Баланс модели за год</h2>
+      <p class="hint">Свечной график за сен 2025 — сен 2026: таймфреймы 12ч–1М, длина серии 2–8, позиция, усиление, порог, часы, Фибоначчи, индикатор циклов. Страница весит ~3.7 МБ, открывается пару секунд.</p>
+      <a class="cta" id="chartLink" href="chart.html">📈 Открыть график</a></section>
+  </div>
+</main>
+
+<div class="big" id="applyWrap" hidden><button id="applyBtn">Применить</button></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+// открыто внутри Telegram? (у кнопки клавиатуры initData пустой, поэтому смотрим на платформу)
+const inTg = !!(tg && tg.platform && tg.platform !== "unknown");
+const $ = id => document.getElementById(id);
+const fmt = v => Math.round(v).toLocaleString("ru-RU").replace(/ /g, " ");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// участники по номерам — тот же список, что в ядре (NAMES)
+const NAMES = JSON.parse(decodeURIComponent(escape(atob("=0lI6CdjRvL0RCNI9CtvQDY0AGdrQLCIsIiuQDL08CNgR3K0iACLioL0+CdvQ3L04CNqQLCIsISvQPY03CtpQDSvQDL0oCtIgwiI5CtvQbL0DG9pQLCIsIiuQjL09CdiRjL0lCtIgwiIAGNgR7L0iCNI4CNIwCNgRDY01CNpQLCIsIysQDY0+CdsQjL0AGtoQLCIsICgR7L08CdtQDY0iCtIgwiIPGdvQDL0iCtIgwiI4CNiRDL0FGNsQrL0wCtoQDCsQTL01CtuQDL0iCtIgwiI0CduQXL07CdkQDyjR3L0+CdoQLCIsIiuQPY0+CNvQHK0iACLi0L0+CNuQ/L0AGtvQrL0hCtIgwiI7CdtQTL09CNuQHK0iACLi4L0AGNuQfJ0tEL0wCdoQLCIsIyjRjL07CNuQLY0/CdtQDK0iACLi0L0NGNtQnL0wCNoQLCIsICsQDY0wCtgRjL0dCtIgwiIwCdvQjL07CNuQzJ0iACLiML09CdtQrJ0g4Y0bCtIgwiI2CNtQnL01CtmQDCuQHY0BGdjRrJ0iACLi4L0wC9mQDysQ3L0DGtmQLCIsISvQjL02CNlQDysQ3L0DGtmQLCIsICuQfK0g0L0wC9gRrJ0iACLi0L0wCtmQDCjRvL0wCtgR7L0aCtIgwiI+CthRjL07CNI1CtvQ3L0wCttQ7L0aCtIgwiIwCdvQDL0CGNuQrJ0iACLigL0IGdvQXL0aCtIgwiI+CdvQDL0aCtIgwiIwCNgR7L0SC9J4CNlQLCIsISgRPL0zCNuQDY0RCNI4CtuQ3Y02CNlQLCIsIitQTL05CdtQrJ0ggL09CdvQ7L02CNlQLCIsIytQjL0FGNgRPY0SCNI9CtvQHY05CdtQbL0UCtIgwiIBGtuQDL02CNlQLCIsIivQDY0+C9kQLCIsIivQDL0oCNI7CNsQDY01CdvQXL0TCtIgwiI+C9pQDSuQDL0gCNI+CdkQLyW".split("").reverse().join("")))));
+const SHORT = JSON.parse(decodeURIComponent(escape(atob("9JSvQ7L0AGNgR3K0iAiOioL0NG9uQHJ0g0L0+CNgRDY0tCtIgwiI6CtvQ3L04CNqQLCI6IiuQ7L09CdvQjL0oCtIgwiI3CtpQ3L0wCNqQLCI6ISvQPY03CtpQDSvQDL0oCtIgwiI9CdiRjL0lCtIgojI6CNuQ3L0JGNuQXK0iACLiAL0AGNgRXL0kCtIgojIAGNgR7L0iCNI4CNIwCNgRDY01CNpQLCIsICgRHL04CNgRLK0iAiOiML0AGtvQHL04CNgRLK0iACLiAY08CdtQDY0iCtIgojIAGtvQzL01CNgRLK0iACLiQL01CtuQDL0iCtIgojI4CNiRDL0FGNsQrL0wCtoQDCsQTL01CtuQDL0iCtIgwiIPGdvQ7L0hCtIgojI0CduQXL07CdkQDyjR3L0+CdoQLCIsIyvQDY0+CtuQHK0iAiOi0L0+CNuQ/L0AGtvQrL0hCtIgwiI7CNtQ3L04CdoQLCI6IyuQXL00CdvQjL0hCtIgwiIAG9lQHL0wCdoQLCI6IivQDY04C9lQ3SsQDL0hCtIgwiI7CtgR/L01CNoQLCI6IyjRjL07CNuQLY0/CdtQDK0iACLi0L00CduQDL0gCtIgojI9CdjRTL05CNsQDK0iACLi0L01CtmQ7Y0bCtIgojIzCdvQXL0aCNIOG9mQLCIsIivQDL0bCtmQLCI6IivQDL0bCNIzCdvQPY0aCtIgwiI9CNuQbL0UCtmQLCI6ISvQjL02CNlQDysQ3L0DGtmQLCIsIypQ3L0wC9gRrJ0iAiOigL0nCNI9CNsQPY0aCtIgwiI7CNsQLY0+CtmQLCI6ISvQDL0aCNIMG9uQDL0CGtvQrJ0iACLi0L0wCttQ7L0aCtIgojI+CthRjL07CNI1CtvQ3L0wCttQ7L0aCtIgwiIAGtvQLJ04CNlQLCI6ICsQDY0+CtkQfCuQTJ0iACLigL06CdjRbL0UCtIgojIBG9sQPL04CNgRHJ0ggL06CdjRbL0UCtIgwiI9CdvQ7L02CNlQLCI6IitQTL05CdtQrJ0ggL09CdvQ7L02CNlQLCIsIytQXY0AG9gRLJ0iAiOicL04CdhRDY0DGtkQDSvQ7L0BGduQXL02CNlQLCIsIivQDL0oCtIgojI+CNsQjK0gsL0wCNgRXL09CdtQPJ0iACLikL0wCNoQ7L0RCtIgojI+C9pQDSuQDL0gCNI+CdkQLye".split("").reverse().join("")))));
+const nm = x => typeof x === "number" ? (NAMES[x] || "?") : String(x);
+const sh = x => { const n = nm(x); return (SHORT[n] || n.replace(/[ ']/g, "")).slice(0, 5).padEnd(5, " "); };
+
+// снимок от ядра: ?s=<base64 JSON>
+let D = null;
+try {
+  const raw = new URLSearchParams(location.search).get("s");
+  if (raw) D = JSON.parse(decodeURIComponent(escape(atob(raw.replace(/-/g, "+").replace(/_/g, "/")))));
+} catch (e) { D = null; }
+$("chartLink").href = "chart.html" + location.search;
+
+// --- шапка: время снимка ---
+if (D && D.at) {
+  $("stamp").textContent = "снимок " + D.at;
+  const [h, m] = D.at.split(":").map(Number), now = new Date(Date.now() + (new Date().getTimezoneOffset() + 180) * 60000);
+  const age = ((now.getHours() * 60 + now.getMinutes()) - (h * 60 + m) + 1440) % 1440;
+  if (age > 10) { $("stamp").classList.add("old"); $("stamp").textContent += ` · ${age} мин назад`; }
+}
+
+// --- LIVE ---
+const circles = bits => [...bits].map(b => b === "1" ? "🔴" : "🟢").join("");
+function streakOf(bits) { if (!bits) return 0; let n = 1; for (let i = bits.length - 2; i >= 0 && bits[i] === bits[bits.length - 1]; i--) n++; return n; }
+function betsOf(bits) {                       // позиции 6+ внутри завершённого сессии: true/false = верна/нет
+  const out = []; let run = 0;
+  for (let j = 1; j < bits.length; j++) { run = j > 1 && bits[j - 1] === bits[j - 2] ? run + 1 : 1; if (run >= 6) out.push(bits[j] !== bits[j - 1]); }
+  return out;
+}
+const h2line = l2 => l2 / 2 >= 29.5 && l2 / 2 <= 37.5;
+let histShow = 10;
+try { histShow = Math.min(20, Math.max(0, +localStorage.getItem("p-hist") || 10)); } catch (e) {}
+function setHist(v) { histShow = Math.min(20, Math.max(0, v)); try { localStorage.setItem("p-hist", histShow); } catch (e) {} renderLive(); haptic(); }
+$("hinc").onclick = () => setHist(histShow + 2); $("hdec").onclick = () => setHist(histShow - 2);
+function renderLive() {
+  if (!D || !D.live) { $("live").innerHTML = '<span class="empty">Нет данных. Нажми «🔄 Обновить» в чате, потом «▶️ Старт».</span>'; $("hist").textContent = ""; return; }
+  const all = D.hist || [], shown = all.slice(0, histShow);
+  $("liveN").textContent = D.live.length; $("histN").textContent = `· ${shown.length} из ${all.length}`;
+  $("histOut").textContent = histShow;
+  $("live").innerHTML = D.live.length ? D.live.map(([l, r, l2, bits]) => {
+    const k = streakOf(bits);
+    return `${esc(sh(l))} ${esc(sh(r))} ${circles(bits)}${k >= 4 ? ` <span class="w">⚡${k}</span>` : ""}`;
+  }).join("\n") : '<span class="empty">идущих сессий нет</span>';
+  $("hist").innerHTML = shown.map(([l, r, l2, bits]) => {
+    const b = betsOf(bits).map(w => w ? "✅" : "❌").join("");
+    return `${esc(sh(l))} ${esc(sh(r))} ${circles(bits)}${b ? " " + b + (h2line(l2) ? "★" : "") : ""}`;
+  }).join("\n") || '<span class="empty">нет</span>';
+}
+
+// --- СЕГОДНЯ ---
+function renderToday() {
+  const t = D && D.today;
+  if (!t) { $("tList").innerHTML = '<span class="empty">Нет данных за сегодня.</span>'; return; }
+  const pct = (w, n) => n ? `${w}/${n} · ${(w / n * 100).toFixed(0)}%` : "—";
+  $("tF").textContent = t.f; $("tA").textContent = t.a; $("tN").textContent = t.n;
+  $("tWR").textContent = t.n ? (t.w / t.n * 100).toFixed(0) + "%" : "—"; $("tWR").className = "v " + (t.n ? (t.w / t.n > .509 ? "u" : "d") : "");
+  $("tH").textContent = pct(t.hw, t.hn); $("tH2").textContent = pct(t.h2w, t.h2n);
+  const rows = (D.tb || []).slice().reverse();
+  $("tList").innerHTML = rows.length ? rows.map(([tm, l, r, rnd, more, win, h2]) =>
+    `<div class="li"><span class="t">${esc(tm)}</span><span class="p">${esc(nm(l))} — ${esc(nm(r))} · ${rnd}р на ${more ? "М" : "Б"}${h2 ? " ★" : ""}</span><span class="r">${win ? "✅" : "❌"}</span></div>`).join("")
+    : '<span class="empty">позиций 6+ сегодня пока не было</span>';
+}
+
+// --- H2 ---
+function renderH2() {
+  const h = D && D.h2;
+  if (!h) { $("h2Term").textContent = "нет данных"; return; }
+  const n = h.n, p = n ? h.w / n : 0, be = h.be ? h.be / 1000 : 0.509, roi = h.roi / 1000;
+  const se = n ? Math.sqrt(p * (1 - p) / n) : 0, lo = p - 1.96 * se, hi = p + 1.96 * se;
+  let v, c;
+  if (n < 100) { v = `рано (${n}/100)`; c = "w"; } else if (lo > be) { v = "сильное подтверждение"; c = "u"; }
+  else if (p > be && roi > 0) { v = "подтверждается"; c = "u"; } else { v = "провал"; c = "d"; }
+  $("h2Verdict").textContent = v; $("h2Verdict").className = "pill " + c;
+  $("h2Term").innerHTML = [
+    `С          ${esc(h.since)}`,
+    `Позиций     ${String(n).padStart(6)}`,
+    `Верно      ${String(h.w).padStart(6)}`,
+    `Точность      <span class="${p > be ? "u" : "d"}">${(p * 100).toFixed(1).padStart(5)}%</span>` + (n >= 30 ? `  (${(lo * 100).toFixed(1)}–${(hi * 100).toFixed(1)})` : ""),
+    `Безубыток  ${(be * 100).toFixed(1).padStart(5)}%`,
+    `ROI        <span class="${roi >= 0 ? "u" : "d"}">${(roi >= 0 ? "+" : "") + (roi * 100).toFixed(1)}%</span>`,
+    `Ожидание   ~53.6–54.3%`].join("\n");
+}
+
+// --- ИТОГИ ---
+function renderStats() {
+  if (!D) { $("sList").innerHTML = '<span class="empty">нет данных</span>'; return; }
+  const ch = D.bank - D.start;
+  $("sBank").textContent = fmt(D.bank) + " ₽"; $("sStart").textContent = fmt(D.start) + " ₽";
+  $("sCh").textContent = (ch >= 0 ? "+" : "") + fmt(ch) + " ₽"; $("sCh").className = "v " + (ch >= 0 ? "u" : "d");
+  $("sN").textContent = D.n; $("sW").textContent = D.n ? `${D.w} · ${(D.w / D.n * 100).toFixed(0)}%` : "—";
+  $("sPlay").textContent = D.set.play ? "идёт" : "стоп"; $("sPlay").className = "v " + (D.set.play ? "u" : "m");
+  $("sSet").textContent = D.set.mode === "pct" ? `${D.set.pct}%` : `${D.set.rub} ₽`;
+  const rows = (D.sig || []).slice().reverse();
+  $("sList").innerHTML = rows.length ? rows.map(([tm, pair, rnd, bet, stake, win]) =>
+    `<div class="li"><span class="t">${esc(tm)}</span><span class="p">${esc(pair)} · ${rnd}р на ${esc(bet)}${stake ? ` · ${fmt(stake)} ₽` : ""}</span><span class="r">${win ? "✅" : "❌"}</span></div>`).join("")
+    : '<span class="empty">событий пока не было</span>';
+}
+
+// --- ПУЛЬТ ---
+const st0 = (D && D.set) || { play: true, mode: "pct", pct: 2, rub: 100, dogon: "off", steps: 3, only_b: false, line_h2: true };
+const s = Object.assign({}, st0, { reset: false, bank: (D && D.start) || 10000 });
+const bankNow = D && D.bank != null ? D.bank : 10000;
+function segBind(id, key, conv = x => x) {
+  $(id).addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; s[key] = conv(b.dataset.v); drawCtl(); haptic(); });
+}
+segBind("mode", "mode"); segBind("dogon", "dogon"); segBind("steps", "steps", Number);
+[["play", "play"], ["lineH2", "line_h2"], ["onlyB", "only_b"], ["reset", "reset"]].forEach(([id, key]) =>
+  $(id).addEventListener("change", e => { s[key] = e.target.checked; drawCtl(); haptic(); }));
+function stepStake(sign) {
+  if (s.mode === "pct") { const d = s.pct + sign * 0.5 < 2 || s.pct < 2 ? 0.5 : 1; s.pct = Math.round(Math.min(20, Math.max(0.5, s.pct + sign * d)) * 10) / 10; }
+  else { const d = s.rub + sign * 10 < 100 ? 10 : 50; s.rub = Math.min(100000, Math.max(10, s.rub + sign * d)); }
+  drawCtl(); haptic();
+}
+$("inc").onclick = () => stepStake(1); $("dec").onclick = () => stepStake(-1);
+$("binc").onclick = () => { s.bank = Math.min(10000000, s.bank + (s.bank < 10000 ? 1000 : 5000)); drawCtl(); haptic(); };
+$("bdec").onclick = () => { s.bank = Math.max(1000, s.bank - (s.bank <= 10000 ? 1000 : 5000)); drawCtl(); haptic(); };
+function drawCtl() {
+  for (const [id, key] of [["mode", "mode"], ["dogon", "dogon"], ["steps", "steps"]])
+    $(id).querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v) === String(s[key])));
+  $("play").checked = s.play; $("playText").textContent = s.play ? "Идёт" : "Остановлена"; $("playText").className = s.play ? "u" : "";
+  $("lineH2").checked = s.line_h2; $("onlyB").checked = s.only_b; $("reset").checked = s.reset;
+  $("stakeOut").textContent = s.mode === "pct" ? `${s.pct} %` : `${fmt(s.rub)} ₽`;
+  $("stakeHint").textContent = s.mode === "pct" ? `сейчас ≈ ${fmt(Math.ceil(bankNow * s.pct / 1000) * 10)} ₽` : `${(s.rub / bankNow * 100).toFixed(1)}% от баланса`;
+  $("stakeWarn").hidden = !((s.mode === "pct" ? s.pct : s.rub / bankNow * 100) > 3);
+  $("stepsRow").hidden = s.dogon === "off"; $("dogonWarn").hidden = s.dogon === "off";
+  $("resetRow").hidden = !s.reset; $("bankOut").textContent = fmt(s.bank);
+}
+function haptic() { try { tg && tg.HapticFeedback.selectionChanged(); } catch (e) {} }
+function apply() {
+  const payload = JSON.stringify({ v: 1, play: s.play, mode: s.mode, pct: s.pct, rub: s.rub, dogon: s.dogon, steps: s.steps,
+                                   only_b: s.only_b, line_h2: s.line_h2, reset_bank: s.reset ? s.bank : null });
+  if (!inTg) return toast("Открой приложение кнопкой «▶️ Старт» в ядре — тогда настройки уйдут ядру");
+  try { tg.sendData(payload); }                     // ядро получит настройки, окно закроется
+  catch (e) { toast("Не отправилось: открой приложение кнопкой «▶️ Старт» внизу чата (не из меню и не по ссылке)"); }
+}
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; setTimeout(() => t.hidden = true, 3500); }
+
+// --- вкладки ---
+let current = "live";
+function show(v) {
+  current = v;
+  document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-selected", b.dataset.v === v));
+  document.querySelectorAll(".view").forEach(el => el.hidden = el.id !== "v-" + v);
+  const ctl = v === "ctl";
+  if (inTg) { $("applyWrap").hidden = true; try { ctl ? tg.MainButton.show() : tg.MainButton.hide(); } catch (e) {} }
+  else $("applyWrap").hidden = !ctl;
+  try { localStorage.setItem("p-tab", v); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+document.querySelector("nav").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { show(b.dataset.v); haptic(); } });
+
+if (inTg) {
+  document.body.classList.add("in-tg");
+  tg.ready(); tg.expand();
+  try { tg.setHeaderColor("#131722"); tg.setBackgroundColor("#131722"); } catch (e) {}
+  tg.MainButton.setParams({ text: "Применить", color: "#3d7bff", text_color: "#ffffff" });
+  tg.MainButton.onClick(apply);
+}
+$("applyBtn").onclick = apply;
+renderLive(); renderToday(); renderH2(); renderStats(); drawCtl();
+let start = "live"; try { start = localStorage.getItem("p-tab") || "live"; } catch (e) {}
+show(start === "chart" ? "live" : start);
+</script>
+</body>
+</html>
