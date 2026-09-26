@@ -109,6 +109,7 @@
   <header>
     <h1><span class="sym" id="sym">R·6+</span> Баланс модели «R6»</h1>
     <span class="sub" id="period">сен 2025 — сен 2026 · время МСК</span>
+    <span class="sub" id="liveInfo"></span>
     <span class="shuffled-flag">● СЛУЧАЙНЫЙ ПОРЯДОК</span>
   </header>
 
@@ -202,6 +203,13 @@ const PACK = window.PACK;  // сжато: [Δвремя, коэф·1000−1000, 
 const RAW = [];         // [время МСК (сек), верна 0/1, коэф, порог, 1 = после Б, длина серии]
 { let t = PACK.t0; const a = PACK.d;
   for (let i = 0; i < a.length; i += 4) { t += a[i]; const f = a[i + 3]; RAW.push([t, f & 1, (a[i + 1] + 1000) / 1000, a[i + 2] / 2, (f >> 1) & 1, f >> 2]); } }
+const BASE_N = RAW.length;
+function unpack(P) {                        // тот же формат, что у базы
+  const out = []; let t = P.t0; const a = P.d || [];
+  for (let i = 0; i < a.length; i += 4) { t += a[i]; const f = a[i + 3]; out.push([t, f & 1, (a[i + 1] + 1000) / 1000, a[i + 2] / 2, (f >> 1) & 1, f >> 2]); }
+  return out;
+}
+let liveStart = null, liveSig = "";
 const $ = id => document.getElementById(id);
 const fmtR = v => Math.round(v).toLocaleString("ru-RU").replace(/ /g, " ");
 const MONTHS = ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
@@ -326,6 +334,10 @@ function render(fit) {
     maData.push({ time: current[i].time, value: m, color: current[i].close >= m ? "#26a69a" : "#ef5350" });
   }
   maS.setData(maData);
+  if (liveStart != null) {
+    const c = current.find(c => c.time >= bucket(liveStart));
+    cs.setMarkers(c ? [{ time: c.time, position: "aboveBar", color: "#e0a534", shape: "arrowDown", text: "новые" }] : []);
+  } else cs.setMarkers([]);
   start.setData(current.length ? [{ time: current[0].time, value: res.bank0 }, { time: current[current.length - 1].time, value: res.bank0 }] : []);
   if (fit) { chart.timeScale().fitContent(); chart2.timeScale().fitContent(); }
   stats(); legend(current[current.length - 1]);
@@ -488,8 +500,38 @@ $("favName").addEventListener("keydown", e => { if (e.key === "Enter") favSave()
 document.querySelectorAll(".settings select, .settings input").forEach(el => el.addEventListener("change", favDraw));
 $("tf").addEventListener("click", () => setTimeout(favDraw, 0));
 
+// --- свежие данные из Gist (id приходит от ядра в снимке ?s=…), обновление раз в 90 с ---
+const GIST = (() => { try { const r = new URLSearchParams(location.search).get("s");
+  return r ? (JSON.parse(decodeURIComponent(escape(atob(r.replace(/-/g, "+").replace(/_/g, "/"))))).g || "") : ""; } catch (e) { return ""; } })();
+async function loadLive(first) {
+  if (!GIST || document.hidden) return;
+  try {
+    const r = await fetch(`https://api.github.com/gists/${GIST}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    const g = await r.json();
+    const names = Object.keys(g.files).filter(n => /^\d{4}-\d{2}\.json$/.test(n)).sort();
+    const sig = names.map(n => n + ":" + g.files[n].size).join("|");
+    if (sig === liveSig) return;
+    const rows = [];
+    for (const n of names) {
+      const f = g.files[n];
+      const txt = f.truncated ? await (await fetch(f.raw_url, { cache: "no-store" })).text() : f.content;
+      rows.push(...unpack(JSON.parse(txt)));
+    }
+    rows.sort((a, b) => a[0] - b[0]);
+    RAW.length = BASE_N; RAW.push(...rows);
+    liveSig = sig; liveStart = rows.length ? rows[0][0] : null;
+    const last = rows.length ? new Date(rows[rows.length - 1][0] * 1000) : null;
+    $("period").textContent = "сен 2025 — " + (last ? `${last.getUTCDate()} ${MONTHS[last.getUTCMonth()]} ${String(last.getUTCHours()).padStart(2, "0")}:${String(last.getUTCMinutes()).padStart(2, "0")}` : "сен 2026") + " · время МСК";
+    $("liveInfo").textContent = rows.length ? `· ▼ новые данные с ${new Date(liveStart * 1000).getUTCDate()} ${MONTHS[new Date(liveStart * 1000).getUTCMonth()]}` : "";
+    render(first);
+  } catch (e) { $("liveInfo").textContent = "· свежие данные сейчас недоступны"; }
+}
 setSummary();
 render(true);
+loadLive(true);
+setInterval(() => loadLive(false), 90000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadLive(false); });
 favLoad(favDraw);
 </script>
 
