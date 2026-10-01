@@ -73,6 +73,23 @@
   .setbox .sum { font: 12px var(--mono); color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .setbox[open] .sum { display: none; }
   .setbox .settings { border: 0; border-top: 1px solid var(--line); border-radius: 0 0 6px 6px; }
+  .fbox { border-top: 1px solid var(--line); }
+  .fbox > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+  .fbox > summary::-webkit-details-marker { display: none; }
+  .fbox > summary::after { content: "▾"; margin-left: auto; color: var(--muted); transition: transform .15s; }
+  .fbox[open] > summary::after { transform: rotate(180deg); }
+  .fbox .st { font: 600 12px var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--text); white-space: nowrap; }
+  .fbox .sum { font: 12px var(--mono); color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .setbox[open] .fbox .sum { display: block; }
+  .fbox[open] .sum { display: none !important; }
+  .fbox .fsets { border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+  .tgl { position: relative; width: 34px; height: 20px; flex: none; cursor: pointer; }
+  .tgl input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .tgl i { position: absolute; inset: 0; border-radius: 10px; background: var(--line); transition: background .15s; pointer-events: none; }
+  .tgl i::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+  .tgl input:checked + i { background: var(--accent, #3d7bff); }
+  .tgl input:checked + i::after { transform: translateX(14px); background: #fff; }
+  .tgl input:focus-visible + i { outline: 2px solid var(--accent, #3d7bff); outline-offset: 2px; }
   .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
   .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .field label { font-size: 11px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
@@ -167,13 +184,20 @@
       <div class="row"><select id="l1" aria-label="От"></select><select id="l2" aria-label="До"></select></div></div>
     <div class="field"><label for="dir">Направление</label>
       <select id="dir"><option value="all">после ▲▲▲ и ▼▼▼</option><option value="b">только после ▲▲▲</option><option value="m">только после ▼▼▼</option></select></div>
-    <div class="field"><label for="ma">Средняя баланса (индикатор)</label>
-      <select id="ma"><option value="0">выкл</option><option value="7">7 свечей</option><option value="14" selected>14 свечей</option><option value="30">30 свечей</option></select></div>
-    <div class="field"><label for="phase">Входить только в подъёме</label>
-      <select id="phase"><option value="0">выкл — все события</option><option value="20">да, средняя 20 позиций</option><option value="50">да, средняя 50 позиций</option><option value="100">да, средняя 100 позиций</option></select></div>
-    <div class="field"><label for="cut">Коэф в источнике</label>
-      <select id="cut"><option value="0">как в данных</option><option value="0.03">ниже на 0.03</option><option value="0.05">ниже на 0.05</option><option value="0.1">ниже на 0.10</option></select></div>
   </div>
+    <details class="fbox" id="fbox">
+    <summary><label class="tgl" title="Включить фильтр"><input type="checkbox" id="feOn" aria-label="Фильтр по ленте вкл/выкл"><i></i></label><span class="st">📼 Фильтр по ленте</span><span class="sum" id="feSum">выкл</span></summary>
+    <div class="settings fsets">
+    <div class="field"><label for="fe">Смотрим</label>
+      <select id="fe"><option value="20">последние 20 сессий</option><option value="50">последние 50 сессий</option><option value="100" selected>последние 100 сессий</option><option value="200">последние 200 сессий</option></select></div>
+    <div class="field"><label for="fk">Считаем</label>
+      <select id="fk"><option value="full">целиком одного знака</option><option value="5">серия 5+ подряд</option><option value="6">серия 6+ подряд</option><option value="7">серия 7+ подряд</option></select></div>
+    <div class="field"><label for="fc">Цвет</label>
+      <select id="fc"><option value="any">любой</option><option value="b">▲</option><option value="m">▼</option></select></div>
+    <div class="field"><label for="fop">Входим, если таких</label>
+      <div class="row"><select id="fop"><option value="lt">меньше</option><option value="ge">не меньше</option></select><select id="fx" aria-label="Сколько"><option value="0">0</option><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select></div></div>
+    </div>
+  </details>
   </details>
 
   <div class="chartbox">
@@ -183,13 +207,14 @@
 
   <div class="stats" id="stats"></div>
 
+  <p class="note"><b>Фильтр по ленте.</b> Перед каждой позицией смотрим последние N законченных сессий всей ленты и считаем, сколько из них были целиком одного знака или с серией K+ подряд. Входим, если таких меньше (или не меньше) выбранного числа. Отсеянные позиций — в строке «Пропущено лентой». Подобранные на этом же годе числа легко «подгоняются» — проверять на других годах.</p>
   <p class="note">Свечи — баланс за выбранный период: открытие, максимум, минимум, закрытие. Столбики внизу — насколько точность за период был выше (зелёные) или ниже (красные) точки безубытка. Событие: N+ одинаковых тиков подряд (N выбирается в «Позиция на разворот после»; если серия продолжается, входим снова) (время тика больше/меньше порога С) → позиция на разворот в следующем тике, без усиления. Данные за год, время позиции оценено по ходу сессии. <b>Это прошлые данные</b>: они показывают, как модель вела себя на истории, но не обещают того же в будущем. «🎲 Перемешать» раскладывает те же позиции в случайном порядке — так видно, что подъёмы и провалы бывают и без всяких «циклов».</p>
   <p class="note"><b>Усиление.</b> После минуса следующая позиция увеличивается: «×2» — вдвое от прошлой, «перекрытие» — так, чтобы плюс вернул весь минус серии и принёс обычную прибыль. Усиление идёт по следующим событиям; после заданного числа шагов подряд без плюса минус фиксируется и позиция возвращается к обычной. «Усиление исчерпан» — сколько раз это случилось.</p>
   <p class="note"><b>Фибоначчи.</b> «📐 Фибо» — кликни на графике начало движения, затем его конец: появятся уровни 0 / 23.6 / 38.2 / 50 / 61.8 / 78.6 / 100% и расширение 161.8%. «Авто» строит уровни от минимума до максимума на видимом участке. На кривой баланса это инструмент для глаза: уровни показывают, насколько баланс откатился от пика, но не предсказывают, где откат остановится.</p>
-  <p class="note"><b>Индикатор циклов.</b> Порог средней зелёная, когда баланс выше неё («подъём»), и красная, когда ниже («спад»). Фильтр «Входить только в подъёме» пропускает события, пока баланс ниже своей средней за последние 20/50/100 позиций. Сравни «Точность» с «Пропущено в спаде»: на данных за год пропущенные позиции попадали не реже оставленных, то есть фаза подъёма или спада не помогает угадать следующую позицию.</p>
 </div>
 
 <script src="data.js"></script>
+<script src="feed.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
   // внутри Telegram: на весь экран, кнопка «Назад» ведёт в пульт (с теми же настройками)
@@ -204,6 +229,34 @@ const RAW = [];         // [время МСК (сек), верна 0/1, коэф
 { let t = PACK.t0; const a = PACK.d;
   for (let i = 0; i < a.length; i += 4) { t += a[i]; const f = a[i + 3]; RAW.push([t, f & 1, (a[i + 1] + 1000) / 1000, a[i + 2] / 2, (f >> 1) & 1, f >> 2]); } }
 const BASE_N = RAW.length;
+// ===== 📼 Фильтр по ленте: сколько из последних N законченных сессий были «целиком одного знака» или с серией K+ =====
+const FE = [];          // [время конца сессии МСК (сек), серия ▲ | серия ▼<<4 | тиков<<8]
+function feedUnpack(P, out) { let t = P.t0; const a = (P && P.d) || []; for (let i = 0; i < a.length; i += 2) { t += a[i]; out.push([t, a[i + 1]]); } }
+if (window.FEED) feedUnpack(window.FEED, FE);
+const FE_BASE = FE.length;
+let feC = null;
+function feedPrep() {
+  const key = $("fk").value + $("fc").value + FE.length;
+  if (feC && feC.key === key) return feC;
+  const kind = $("fk").value, col = $("fc").value, K = +kind;
+  const pref = new Int32Array(FE.length + 1);
+  for (let i = 0; i < FE.length; i++) {
+    const c = FE[i][1], b = c & 15, m = (c >> 4) & 15, n = c >> 8;
+    const okB = kind === "full" ? b === n : b >= K, okM = kind === "full" ? m === n : m >= K;
+    pref[i + 1] = pref[i] + ((col === "b" ? okB : col === "m" ? okM : okB || okM) ? 1 : 0);
+  }
+  return feC = { key, pref };
+}
+// true — позицию оставляем. Сессии, закончившиеся до момента позиции; если истории меньше окна — пропуск.
+function feedOk(t) {
+  if (!$("feOn").checked) return true; const W = +$("fe").value;
+  const { pref } = feedPrep();
+  let lo = 0, hi = FE.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (FE[mid][0] < t) lo = mid + 1; else hi = mid; }
+  if (lo < W) return false;
+  const cnt = pref[lo] - pref[lo - W], x = +$("fx").value;
+  return $("fop").value === "lt" ? cnt < x : cnt >= x;
+}
+
 function unpack(P) {                        // тот же формат, что у базы
   const out = []; let t = P.t0; const a = P.d || [];
   for (let i = 0; i < a.length; i += 4) { t += a[i]; const f = a[i + 3]; out.push([t, f & 1, (a[i + 1] + 1000) / 1000, a[i + 2] / 2, (f >> 1) & 1, f >> 2]); }
@@ -231,29 +284,23 @@ function simulate() {
   const bank0 = Math.max(100, +$("bank0").value || 10000);
   const mode = $("mode").value, stake = Math.max(0, +$("stake").value || 0);
   const h1 = +$("h1").value, h2 = +$("h2").value, l1 = +$("l1").value, l2 = +$("l2").value;
-  const dir = $("dir").value, cut = +$("cut").value, runN = +$("run").value;
+  const dir = $("dir").value, runN = +$("run").value;
   const dgMode = $("dg").value, dgSteps = +$("dgs").value;
   let dgStep = 0, dgLost = 0, dgLast = 0, dgBusts = 0, dgMax = 0;   // состояние усиления
   // отбор позиций по фильтрам (по реальному времени), потом — порядок исходов реальный или перемешанный
-  const sel = RAW.filter(r => {
+  const base = RAW.filter(r => {
     const h = Math.floor((r[0] % 86400) / 3600);
     const inH = h1 < h2 ? (h >= h1 && h < h2) : (h >= h1 || h < h2);
     return r[5] >= runN && inH && r[3] >= l1 && r[3] <= l2 && (dir === "all" || (dir === "b") === !!r[4]);
   });
+  const sel = $("feOn").checked ? base.filter(r => feedOk(r[0])) : base;
+  const skipped = base.length - sel.length, skipWins = base.reduce((a, r) => a + r[1], 0) - sel.reduce((a, r) => a + r[1], 0);
   let outcomes = sel.map(r => [r[1], r[2]]);
-  const phaseN = +$("phase").value;
   if (shuffled) { const rnd = mulberry(42); for (let i = outcomes.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [outcomes[i], outcomes[j]] = [outcomes[j], outcomes[i]]; } }
-  let bank = bank0, peak = bank0, maxDD = 0, lo = bank0, wins = 0, bust = null, skipped = 0, skipWins = 0;
+  let bank = bank0, peak = bank0, maxDD = 0, lo = bank0, wins = 0, bust = null;
   const pts = [];
-  // «теневой» баланс в позициях по ВСЕМ событиям — по нему фильтр решает, подъём сейчас или спад
-  const shadow = []; let eq = 0;
   for (let i = 0; i < sel.length; i++) {
-    const [w, k0] = outcomes[i], k = k0 - cut;
-    if (phaseN && i >= phaseN) {
-      let m = 0; for (let j = i - phaseN; j < i; j++) m += shadow[j]; m /= phaseN;
-      if (shadow[i - 1] < m) { skipped++; skipWins += w; eq += w ? k - 1 : -1; shadow.push(eq); continue; }   // спад — пропуск
-    }
-    eq += w ? k - 1 : -1; shadow.push(eq);
+    const [w, k] = outcomes[i];
     const base = mode === "pct" ? Math.ceil(bank * stake / 100 / 10) * 10 : stake;
     let st = base;
     if (dgMode !== "off" && dgStep > 0)          // усиление: ×2 от прошлой позиции или «перекрытие» минуса + обычная прибыль
@@ -318,7 +365,6 @@ link(chart, chart2); link(chart2, chart);
 const cs = chart.addCandlestickSeries({ upColor: "#26a69a", downColor: "#ef5350", borderVisible: false, wickUpColor: "#26a69a", wickDownColor: "#ef5350",
   priceFormat: { type: "custom", formatter: p => fmtR(p), minMove: 1 } });
 const start = chart.addLineSeries({ color: "rgba(138,143,156,.45)", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-const maS = chart.addLineSeries({ lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
 const hs = chart2.addHistogramSeries({ priceFormat: { type: "custom", formatter: v => (v > 0 ? "+" : "") + v.toFixed(0), minMove: 0.1 }, priceLineVisible: false, lastValueVisible: false });
 
 let current = [], res = null;
@@ -328,12 +374,6 @@ function render(fit) {
   cs.setData(current.map(c => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close })));
   hs.setData(current.map(c => { const wr = c.w / c.n * 100, be = c.be / c.n * 100, v = wr - be;
     return { time: c.time, value: v, color: v >= 0 ? "rgba(38,166,154,.75)" : "rgba(239,83,80,.75)" }; }));
-  const maN = +$("ma").value, maData = [];
-  if (maN) for (let i = maN - 1; i < current.length; i++) {
-    let m = 0; for (let j = i - maN + 1; j <= i; j++) m += current[j].close; m /= maN;
-    maData.push({ time: current[i].time, value: m, color: current[i].close >= m ? "#26a69a" : "#ef5350" });
-  }
-  maS.setData(maData);
   if (liveStart != null) {
     const c = current.find(c => c.time >= bucket(liveStart));
     cs.setMarkers(c ? [{ time: c.time, position: "aboveBar", color: "#e0a534", shape: "arrowDown", text: "новые" }] : []);
@@ -368,8 +408,8 @@ function stats() {
     ["Позиций", fmtR(r.n) + (r.n ? ` · ${(r.n / 366).toFixed(1)}/д` : ""), ""],
     ["Точность", r.n ? (r.wins / r.n * 100).toFixed(1) + "%" : "—", ""],
   ];
+  if (r.skipped) items.push(["Пропущено лентой", `${fmtR(r.skipped)} · точность ${(r.skipWins / r.skipped * 100).toFixed(1)}%`, ""]);
   if (r.dgMode !== "off") items.push(["Усиление исчерпан", `${fmtR(r.dgBusts)} раз`, r.dgBusts ? "d" : ""], ["Макс. позиция", fmtR(r.dgMax) + " ₽", ""]);
-  if (r.skipped) items.push(["Пропущено в спаде", `${fmtR(r.skipped)} · точность ${(r.skipWins / r.skipped * 100).toFixed(1)}%`, ""]);
   if (r.bust) items.push(["Баланс слит", new Date(r.bust * 1000).toISOString().slice(0, 10).split("-").reverse().join("."), "d"]);
   $("stats").innerHTML = items.map(([k, v, c]) => `<div class="stat"><span class="k">${k}</span><span class="v ${c}">${v}</span></div>`).join("");
 }
@@ -423,7 +463,16 @@ $("shuffle").addEventListener("click", () => { shuffled = !shuffled; $("shuffle"
 $("fit").addEventListener("click", () => { chart.timeScale().fitContent(); chart2.timeScale().fitContent(); });
 $("mode").addEventListener("change", () => { const pct = $("mode").value === "pct";
   $("stake").step = pct ? 0.5 : 50; $("stake").min = pct ? 0.5 : 10; $("stake").value = pct ? 2 : 200; render(false); });
-["run", "dg", "dgs", "bank0", "stake", "h1", "h2", "l1", "l2", "dir", "cut", "ma", "phase"].forEach(id => $(id).addEventListener("change", () => render(false)));
+["run", "dg", "dgs", "bank0", "stake", "h1", "h2", "l1", "l2", "dir", "feOn", "fe", "fk", "fc", "fop", "fx"].forEach(id => $(id).addEventListener("change", () => render(false)));
+// сводка в заголовке шторки; переключатель не раскрывает/не сворачивает шторку
+const feShow = () => {
+  const on = $("feOn").checked, k = $("fk").value;
+  $("feSum").textContent = on ? `${$("fe").value} сессий · ${k === "full" ? "целиком" : k + "+"} · ${$("fc").selectedOptions[0].textContent} · ${$("fop").value === "lt" ? "<" : "≥"} ${$("fx").value}` : "выкл";
+};
+["feOn", "fe", "fk", "fc", "fop", "fx"].forEach(id => $(id).addEventListener("change", feShow));
+$("feOn").addEventListener("change", () => { setSummary(); favDraw(); });   // флажок вне сетки .settings
+$("feOn").closest("label").addEventListener("click", e => e.stopPropagation());
+feShow();
 $("stake").addEventListener("input", () => render(false));
 
 function setSummary() {
@@ -431,6 +480,7 @@ function setSummary() {
   const dg = $("dg").value === "off" ? "без усиления" : `${$("dg").value === "x2" ? "×2" : "перекр."}/${$("dgs").value}ш`;
   const h = v => String(v).padStart(2, "0");
   $("setSum").textContent = `после ${$("run").value} · ${stake} · ${dg} · ${h($("h1").value)}–${h($("h2").value)} · ${(+$("l1").value).toFixed(1)}–${(+$("l2").value).toFixed(1)}`;
+  if ($("feOn").checked) $("setSum").textContent += ` · 📼 ${$("fe").value}: ${$("fop").value === "lt" ? "<" : "≥"}${$("fx").value}`;
 }
 document.querySelectorAll(".settings select, .settings input").forEach(el => el.addEventListener("change", setSummary));
 $("stake").addEventListener("input", setSummary);
@@ -441,11 +491,11 @@ $("stake").addEventListener("input", setSummary);
   $("setbox").addEventListener("toggle", () => { try { localStorage.setItem("p-setbox", $("setbox").open ? "1" : "0"); } catch (e) {} });
 })();
 // --- избранные настройки ---
-const FAV_KEYS = ["run", "bank0", "mode", "stake", "dg", "dgs", "h1", "h2", "l1", "l2", "dir", "ma", "phase", "cut"];
+const FAV_KEYS = ["run", "bank0", "mode", "stake", "dg", "dgs", "h1", "h2", "l1", "l2", "dir", "feOn", "fe", "fk", "fc", "fop", "fx"];
 const LMIN = $("l1").options[0].value, LMAX = $("l2").options[$("l2").options.length - 1].value;
 const BUILTIN = [
-  { name: "H2 · 2%", builtin: true, s: { run: "6", mode: "pct", stake: "2", dg: "off", dgs: "3", h1: "0", h2: "24", l1: "29.5", l2: "37.5", dir: "all", phase: "0", cut: "0" } },
-  { name: "Ядро 9–24", builtin: true, s: { run: "6", mode: "pct", stake: "2", dg: "off", dgs: "3", h1: "9", h2: "24", l1: LMIN, l2: LMAX, dir: "all", phase: "0", cut: "0" } },
+  { name: "H2 · 2%", builtin: true, s: { run: "6", mode: "pct", stake: "2", dg: "off", dgs: "3", h1: "0", h2: "24", l1: "29.5", l2: "37.5", dir: "all" } },
+  { name: "Ядро 9–24", builtin: true, s: { run: "6", mode: "pct", stake: "2", dg: "off", dgs: "3", h1: "9", h2: "24", l1: LMIN, l2: LMAX, dir: "all" } },
 ];
 const tgApp = window.Telegram && Telegram.WebApp;
 const cloud = tgApp && tgApp.platform && tgApp.platform !== "unknown" && tgApp.CloudStorage && tgApp.isVersionAtLeast && tgApp.isVersionAtLeast("6.9") ? tgApp.CloudStorage : null;
@@ -461,15 +511,18 @@ function favStore() {
   try { localStorage.setItem("p-favs", v); } catch (e) {}
   if (cloud) try { cloud.setItem("p_favs", v); } catch (e) {}
 }
-const favCurrent = () => { const o = {}; FAV_KEYS.forEach(k => o[k] = $(k).value); o.tf = tf; return o; };
-const same = f => Object.entries(f.s).every(([k, v]) => k === "tf" ? v === tf : FAV_KEYS.includes(k) && String($(k).value) === String(v));
+const fval = k => $(k).type === "checkbox" ? ($(k).checked ? "1" : "0") : $(k).value;
+const favCurrent = () => { const o = {}; FAV_KEYS.forEach(k => o[k] = fval(k)); o.tf = tf; return o; };
+// старые наборы могли хранить убранные поля (средняя, коэф в источнике) — их не учитываем
+const same = f => Object.entries(f.s).every(([k, v]) => k === "tf" ? v === tf : !FAV_KEYS.includes(k) || String(fval(k)) === String(v));
 function favApply(f) {
   for (const [k, v] of Object.entries(f.s)) {
     if (k === "tf") { tf = v; $("tf").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.tf === v)); }
-    else if ($(k)) $(k).value = v;
+    else if (k === "fe" && v === "0") $("feOn").checked = false;     // старый формат «выкл»
+    else if ($(k)) { if ($(k).type === "checkbox") $(k).checked = v === "1"; else $(k).value = v; }
   }
   const pct = $("mode").value === "pct"; $("stake").step = pct ? 0.5 : 50; $("stake").min = pct ? 0.5 : 10;
-  setSummary(); render(true); favDraw();
+  feShow(); setSummary(); render(true); favDraw();
 }
 function favDraw() {
   const list = [...BUILTIN, ...favs];
@@ -512,14 +565,18 @@ async function loadLive(first) {
     const names = Object.keys(g.files).filter(n => /^\d{4}-\d{2}\.json$/.test(n)).sort();
     const sig = names.map(n => n + ":" + g.files[n].size).join("|");
     if (sig === liveSig) return;
-    const rows = [];
+    const rows = [], feed = [];
     for (const n of names) {
       const f = g.files[n];
       const txt = f.truncated ? await (await fetch(f.raw_url, { cache: "no-store" })).text() : f.content;
-      rows.push(...unpack(JSON.parse(txt)));
+      const P = JSON.parse(txt);
+      rows.push(...unpack(P));
+      if (P.f) feedUnpack(P.f, feed);              // лента для фильтра «📼»
     }
     rows.sort((a, b) => a[0] - b[0]);
     RAW.length = BASE_N; RAW.push(...rows);
+    const tail = FE_BASE ? FE[FE_BASE - 1][0] : 0;
+    FE.length = FE_BASE; FE.push(...feed.filter(r => r[0] > tail).sort((a, b) => a[0] - b[0])); feC = null;
     liveSig = sig; liveStart = rows.length ? rows[0][0] : null;
     const last = rows.length ? new Date(rows[rows.length - 1][0] * 1000) : null;
     $("period").textContent = "сен 2025 — " + (last ? `${last.getUTCDate()} ${MONTHS[last.getUTCMonth()]} ${String(last.getUTCHours()).padStart(2, "0")}:${String(last.getUTCMinutes()).padStart(2, "0")}` : "сен 2026") + " · время МСК";
